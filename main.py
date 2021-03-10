@@ -23,3 +23,5 @@ import pandas as pd
 
 # print(growth.getTotalSum() + 12794.32)
 
+INTC = Stocks( "intc" )
+INTC.updateDatabase( ) 

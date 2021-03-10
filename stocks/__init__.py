@@ -1,38 +1,66 @@
 import pandas as pd
 import numpy as np
 import dateutil
-
-
-# columns = ['Year', 'Base Link', 'Balance Sheet', 'Income Statement', 'Cashflow Statement']
-# data = []
-# data.append(['2019', 'https://www.sec.gov/Archives/edgar/data/50863/000005086320000011/', 'R4.htm', 'R2.htm', 'R6.htm'])
-# data.append(['2018', 'https://www.sec.gov/Archives/edgar/data/50863/000005086319000007/', 'R4.htm', 'R2.htm', 'R6.htm'])
-# data.append(['2017', 'https://www.sec.gov/Archives/edgar/data/50863/000005086318000007/', 'R4.htm', 'R2.htm', 'R6.htm'])
-# data.append(['2016', 'https://www.sec.gov/Archives/edgar/data/50863/000005086317000012/', 'R4.htm', 'R2.htm', 'R6.htm'])
-# data.append(['2015', 'https://www.sec.gov/Archives/edgar/data/50863/000005086316000105/', 'R4.htm', 'R2.htm', 'R6.htm'])
-# data.append(['2014', 'https://www.sec.gov/Archives/edgar/data/50863/000005086315000015/', 'R4.htm', 'R2.htm', 'R6.htm'])
-# data.append(['2013', 'https://www.sec.gov/Archives/edgar/data/50863/000005086314000020/', 'R4.htm', 'R2.htm', 'R6.htm'])
-# data.append(['2012', 'https://www.sec.gov/Archives/edgar/data/50863/000119312513065416/', 'R4.htm', 'R2.htm', 'R6.htm'])
-# data.append(['2011', 'https://www.sec.gov/Archives/edgar/data/50863/000119312512075534/', 'R4.htm', 'R2.htm', 'R6.htm'])
-# data.append(['2010', 'https://www.sec.gov/Archives/edgar/data/50863/000095012311015783/', 'R4.htm', 'R2.htm', 'R6.htm'])
-
-# df = pd.DataFrame( data, columns=columns )
-# df.to_csv( 'stockData/intcLinks.csv', index=False )
+from edgarScraper import Data
+from datetime import date
+from os import path
 
 
 class Stocks:
+    def __init__( self, symbol ):
+        self.symbol = symbol
+        if path.exists( "stockData\\" + symbol + ".csv" ): 
+            self.edgarParser = Data( self.symbol )
+            #self.data = pd.read_csv( "stockData\\" + self.symbol + ".csv", header=1 )
+            # self.data = pd.DataFrame( empty )
+            todaysDate = date.today( )
+            year = todaysDate.year - 1
+            self.EdgarLinks = pd.read_csv("stockData\\" + self.symbol + "Links.csv")
+        else:
+            pass
 
-    def __init__( self, odoFileName ):
-        self.dataAggrigate = {'Market':'first','Type':'first','Price':'mean','Amount':'sum','Total':'sum','Fee':'sum','Acc':'first'}
-        self.data = pd.read_csv(odoFileName, header=1)
-        self.data = self.data[self.data['Action'] != 'Bank Interest']
-        self.depositData = self.data[self.data['Action'] == 'Journal']
-        self.data = self.data[self.data['Action'] != 'Journal']
-        #self.data['Date'] = self.data['Date'].apply(dateutil.parser.parse, dayfirst=False)
 
-    def getTransactionsOfStock( self, symbol ):
-        return self.data[self.data['Symbol'] == symbol]
+    def updateDatabase( self ):
+        if path.exists("stockData\\" + self.symbol + "Links.csv"): 
+            self.EdgarLinks = pd.read_csv( "stockData\\" + self.symbol + "Links.csv", header=0 )
+            financialsDF = []
+            todaysDate = date.today()
+            year = 2019
+            urlDF = self.EdgarLinks.loc[self.EdgarLinks['Year'] == year]
+            url = urlDF['Base Link'] + urlDF['Income Statement']
+            incomeStatement = self.edgarParser.getIncomeStatement( url.values[0], year )
+            url = urlDF['Base Link'] + urlDF['Balance Sheet']
+            balanceSheet = self.edgarParser.getBalanceSheet( url.values[0], year )
+            url = urlDF['Base Link'] + urlDF['Cashflow Statement']
+            cashflowStatement = self.edgarParser.getCashFlow( url.values[0], year )
+            if cashflowStatement[0]:
+                
+            
+            financialsDF = pd.DataFrame(financials, columns=['Name', year])
 
-    def getTotalSum( self ):
-        return np.sum(self.data['Amount'].replace('[\$,]', '', regex=True).astype(float).dropna().to_numpy())
+            for i in range(8):
+                # year = todaysDate.year - 1 - i
+                financials = []
+                year = 2018 - i
+                urlDF = self.EdgarLinks.loc[self.EdgarLinks['Year'] == year]
+                url = urlDF['Base Link'] + urlDF['Income Statement']
+                incomeStatement = self.edgarParser.getIncomeStatement( url.values[0], year )
+                if incomeStatement[0]:
+                    for row in incomeStatement[1]:
+                        financials.append([row[0], row[1]])
+                url = urlDF['Base Link'] + urlDF['Balance Sheet']
+                balanceSheet = self.edgarParser.getBalanceSheet( url.values[0], year )
+                if balanceSheet[0]:
+                    for row in balanceSheet[1]:
+                        financials.append([row[0], row[1]])
+                url = urlDF['Base Link'] + urlDF['Cashflow Statement']
+                cashflowStatement = self.edgarParser.getCashFlow( url.values[0], year )
+                if cashflowStatement[0]:
+                    for row in cashflowStatement[1]:
+                        financials.append([row[0], row[1]])
+                financialsDF = financialsDF.merge(pd.DataFrame(financials, columns=['Name', year]), how='left', on='Name')
 
+
+            financialsDF.to_csv("stockData\\" + self.symbol + ".csv", index=False)
+        else:
+            print("File of Edgar links does not exists: stockData\\" + symbol + "Links.csv")
