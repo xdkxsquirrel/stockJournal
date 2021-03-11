@@ -36,11 +36,15 @@ class Data:
                 if first:
                     first = False
                 else:
-                    if len(re.findall("[a-zA-Z]", value.text)) > 2:
-                        label = value.text.strip('\n')
-                    elif len(re.findall("[0-9]", value.text)) > 2 and label != '':
-                        number = value.text.strip('\n').strip('$').strip(',')
-                    
+                    if "us-gaap" in value.text:
+                        location = value.text.find("us-gaap")
+                        number = value.text[0:location].strip('\n').strip('$').strip(',')
+                    else:
+                        if len(re.findall("[a-zA-Z]", value.text)) > 2:
+                            label = value.text.strip('\n')
+                        elif len(re.findall("[0-9]", value.text)) > 2 and label != '':
+                            number = value.text.strip('\n').strip('$').strip(',')
+                        
                     if label != '' and number != '':
                         balanceSheet.append([label, number])
                         number = ''
